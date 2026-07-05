@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GoPay Insight Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<style>
+:root{
+  --navy:#01377D;
+  --blue:#009DD1;
+  --cyan:#97E7F5;
+  --lgreen:#7ED348;
+  --green:#26B170;
+  --neg:#EF6461;
+  --neutral:#F5B942;
+  --bg:#F3F6FA;
+  --card:#FFFFFF;
+  --text:#16224A;
+  --muted:#6B7686;
+  --border:#E7ECF3;
+  --shadow: 0 4px 18px rgba(1,55,125,0.07);
+  --shadow-hover: 0 10px 28px rgba(1,55,125,0.14);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+/* ---------- NAVBAR ---------- */
+.navbar{
+  position:sticky; top:0; z-index:50;
+  display:flex; align-items:center; justify-content:space-between;
+  background:rgba(255,255,255,0.85);
+  backdrop-filter:blur(10px);
+  padding:14px 28px;
+  border-bottom:1px solid var(--border);
+}
+.brand{display:flex; align-items:center; gap:12px;}
+.brand-icon{
+  width:42px;height:42px;border-radius:12px;
+  background:linear-gradient(135deg,var(--blue),var(--navy));
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 10px rgba(0,157,209,0.35);
+  flex-shrink:0;
+}
+.brand-icon svg{width:24px;height:24px;}
+.brand-text h1{font-size:16px;margin:0;color:var(--navy);font-weight:800;letter-spacing:-.2px;}
+.brand-text span{font-size:11px;color:var(--muted);}
+.tabs{display:flex; gap:8px; background:#EEF2F7; padding:5px; border-radius:999px;}
+.tab-btn{
+  border:none; background:transparent; padding:9px 20px; border-radius:999px;
+  font-size:13.5px; font-weight:600; color:var(--muted); cursor:pointer;
+  transition:all .35s cubic-bezier(.4,0,.2,1); position:relative; white-space:nowrap;
+}
+.tab-btn:hover{color:var(--navy);}
+.tab-btn.active{
+  background:linear-gradient(135deg,var(--blue),var(--navy));
+  color:#fff; box-shadow:0 6px 16px rgba(0,157,209,0.35);
+}
+@media (max-width:880px){
+  .navbar{flex-direction:column; align-items:stretch; gap:12px;}
+  .tabs{overflow-x:auto;}
+}
+
+/* ---------- PAGE WRAPPER ---------- */
+.page{ display:none; padding:28px; max-width:1440px; margin:0 auto; animation:fadeSlideIn .5s ease; }
+.page.active{ display:block; }
+@keyframes fadeSlideIn{ from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:translateY(0);} }
+
+.page-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:20px; flex-wrap:wrap; margin-bottom:22px;}
+.page-head h2{ font-size:28px; margin:0 0 6px 0; color:var(--navy); font-weight:800; letter-spacing:-.4px;}
+.page-head p{ margin:0; color:var(--muted); font-size:14px; max-width:620px; line-height:1.5;}
+
+.search-pill{
+  display:flex; align-items:center; gap:8px; background:#fff; border:1px solid var(--border);
+  padding:10px 18px; border-radius:999px; min-width:230px; box-shadow:var(--shadow);
+}
+.search-pill input{ border:none; outline:none; font-size:13.5px; width:100%; background:transparent; color:var(--text);}
+.search-pill svg{ flex-shrink:0; opacity:.5; }
+
+/* ---------- KPI CARDS ---------- */
+.kpi-row{ display:grid; grid-template-columns:repeat(5,1fr); gap:16px; margin-bottom:24px;}
+@media (max-width:1100px){ .kpi-row{grid-template-columns:repeat(2,1fr);} }
+.kpi-card{
+  background:var(--card); border-radius:18px; padding:20px 22px 20px; box-shadow:var(--shadow);
+  border:1px solid var(--border); position:relative; overflow:hidden; cursor:default;
+  transition:transform .3s ease, box-shadow .3s ease;
+}
+.kpi-card:hover{ transform:translateY(-5px); box-shadow:var(--shadow-hover); }
+.kpi-icon-badge{
+  position:absolute; top:16px; right:16px; width:38px; height:38px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; animation:pulse 3.5s ease-in-out infinite;
+}
+.kpi-icon-badge svg{ width:18px; height:18px; }
+@keyframes pulse{ 0%,100%{ transform:scale(1);} 50%{ transform:scale(1.1);} }
+.kpi-label{ font-size:12.5px; color:var(--muted); font-weight:600; margin-bottom:10px;}
+.kpi-value{ font-size:27px; font-weight:800; color:#101828; letter-spacing:-.5px;}
+.kpi-value.c-blue{ color:var(--blue); }
+.kpi-value.c-green{ color:var(--green); }
+.kpi-value.c-neg{ color:var(--neg); }
+.kpi-value.c-muted{ color:var(--muted); }
+.kpi-value .kpi-unit{ font-size:14px; font-weight:600; color:var(--muted); margin-left:3px;}
+.kpi-sub{ font-size:12px; margin-top:7px; font-weight:600; display:flex; align-items:center; gap:4px;}
+.kpi-sub svg{ width:12px; height:12px; }
+.kpi-sub.c-blue{ color:var(--blue); }
+.kpi-sub.c-green{ color:var(--green); }
+.kpi-sub.c-neg{ color:var(--neg); }
+.kpi-sub.c-muted{ color:var(--muted); font-weight:500;}
+.kpi-card.c-lightblue .kpi-icon-badge{ background:rgba(0,157,209,0.13); color:var(--blue); }
+.kpi-card.c-cream .kpi-icon-badge{ background:rgba(245,185,66,0.16); color:#C58A0A; }
+.kpi-card.c-green .kpi-icon-badge{ background:rgba(38,177,112,0.14); color:var(--green); }
+.kpi-card.c-pink .kpi-icon-badge{ background:rgba(239,100,97,0.14); color:var(--neg); }
+
+/* ---------- CHART GRID ---------- */
+.grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-bottom:18px; align-items:stretch;}
+.grid2{ display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px; align-items:stretch;}
+@media (max-width:1100px){ .grid3{grid-template-columns:1fr;} .grid2{grid-template-columns:1fr;} }
+
+.chart-card{
+  background:var(--card); border-radius:18px; padding:18px 18px 10px; box-shadow:var(--shadow);
+  border:1px solid var(--border); transition:box-shadow .3s ease, transform .3s ease; opacity:0; transform:translateY(16px);
+  margin-bottom:18px;
+}
+.chart-card.reveal{ opacity:1; transform:translateY(0); }
+.chart-card:hover{ box-shadow:var(--shadow-hover); }
+.chart-card h3{ font-size:14px; margin:0 0 12px 2px; color:var(--text); font-weight:700; }
+.chart-wrap{ position:relative; height:270px; }
+.chart-wrap.tall{ height:640px; }
+.chart-wrap.qwrap{ height:640px; padding-left:4px; }
+
+/* ---------- SURVEI PAGE ---------- */
+.var-chips{ display:flex; gap:10px; flex-wrap:wrap; margin:10px 0 22px; }
+.chip{ padding:8px 16px; border-radius:999px; font-size:12.5px; font-weight:700; color:#fff; box-shadow:var(--shadow); cursor:default; transition:transform .25s ease;}
+.chip:hover{ transform:translateY(-3px) scale(1.03); }
+.chip.x1{background:var(--navy);}
+.chip.x2{background:var(--blue);}
+.chip.m{background:var(--green);}
+.chip.y{background:var(--lgreen); color:#0d3b1f;}
+
+/* ---------- ANALISIS PAGE ---------- */
+.insight-grid{ display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px;}
+@media (max-width:900px){ .insight-grid{grid-template-columns:1fr;} }
+.insight-card{
+  background:var(--card); border-radius:18px; padding:22px; box-shadow:var(--shadow); border:1px solid var(--border);
+  transition:transform .3s ease, box-shadow .3s ease;
+}
+.insight-card:hover{ transform:translateY(-4px); box-shadow:var(--shadow-hover); }
+.insight-card h4{ display:flex; align-items:center; gap:8px; margin:0 0 14px; font-size:15px; color:var(--text);}
+.badge-icon{ width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.badge-icon.good{ background:rgba(38,177,112,0.13); color:var(--green); }
+.badge-icon.bad{ background:rgba(239,100,97,0.13); color:var(--neg); }
+.insight-item{ display:flex; justify-content:space-between; align-items:center; padding:11px 14px; border-radius:12px; background:#F7F9FC; margin-bottom:9px; font-size:13.5px;}
+.insight-item b{color:var(--navy);}
+.insight-item .score{ font-weight:800; padding:3px 11px; border-radius:999px; font-size:12.5px;}
+.score.good{ background:rgba(38,177,112,0.15); color:var(--green);}
+.score.bad{ background:rgba(239,100,97,0.15); color:var(--neg);}
+.conclusion-card{ background:linear-gradient(135deg,#fff,#F7FAFD); border-radius:18px; padding:24px; box-shadow:var(--shadow); border:1px solid var(--border);}
+.conclusion-card h4{ margin:0 0 14px; color:var(--navy); font-size:16px;}
+.conclusion-list{ margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:12px;}
+.conclusion-list li{ display:flex; gap:12px; font-size:13.8px; line-height:1.55; color:var(--text);}
+.conclusion-list .num{ flex-shrink:0; width:26px; height:26px; border-radius:8px; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800;}
+
+/* ---------- ULASAN PAGE ---------- */
+.filter-row{ display:flex; gap:10px; margin:16px 0 18px; flex-wrap:wrap;}
+.filter-btn{
+  border:1.5px solid var(--border); background:#fff; padding:9px 18px; border-radius:999px;
+  font-size:13px; font-weight:700; color:var(--muted); cursor:pointer; transition:all .3s ease;
+}
+.filter-btn:hover{ border-color:var(--blue); color:var(--blue); transform:translateY(-2px);}
+.filter-btn.active{ background:var(--navy); border-color:var(--navy); color:#fff; box-shadow:0 6px 14px rgba(1,55,125,0.25);}
+.filter-btn.active.f-pos{ background:var(--green); border-color:var(--green); box-shadow:0 6px 14px rgba(38,177,112,0.3);}
+.filter-btn.active.f-neg{ background:var(--neg); border-color:var(--neg); box-shadow:0 6px 14px rgba(239,100,97,0.3);}
+.filter-btn.active.f-net{ background:var(--neutral); border-color:var(--neutral); box-shadow:0 6px 14px rgba(245,185,66,0.3);}
+.result-count{ font-size:12.5px; color:var(--muted); margin-bottom:14px; }
+
+.review-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px;}
+@media (max-width:1200px){ .review-grid{grid-template-columns:repeat(2,1fr);} }
+@media (max-width:640px){ .review-grid{grid-template-columns:1fr;} }
+.review-card{
+  background:#fff; border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:var(--shadow);
+  opacity:0; transform:translateY(10px) scale(.98); animation:cardIn .45s ease forwards;
+  transition:box-shadow .25s ease, transform .25s ease; cursor:default;
+}
+.review-card:hover{ box-shadow:var(--shadow-hover); transform:translateY(-3px);}
+@keyframes cardIn{ to{opacity:1; transform:translateY(0) scale(1);} }
+.review-top{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;}
+.review-user{ font-size:12.5px; font-weight:700; color:var(--text); max-width:70%;}
+.sent-badge{ font-size:9.5px; font-weight:800; padding:3px 9px; border-radius:999px; text-transform:uppercase; letter-spacing:.3px; flex-shrink:0;}
+.sent-badge.Positif{ background:rgba(38,177,112,0.13); color:var(--green);}
+.sent-badge.Negatif{ background:rgba(239,100,97,0.13); color:var(--neg);}
+.sent-badge.Netral{ background:rgba(245,185,66,0.18); color:#8a6412;}
+.stars{ color:#F5B942; font-size:12.5px; letter-spacing:1px; margin-bottom:6px;}
+.review-text{ font-size:12.8px; color:#3c465c; line-height:1.5; margin-bottom:10px; min-height:36px;}
+.review-date{ font-size:11px; color:var(--muted);}
+.load-more-wrap{ display:flex; justify-content:center; margin:22px 0 6px;}
+.load-more-btn{
+  background:linear-gradient(135deg,var(--blue),var(--navy)); color:#fff; border:none; padding:12px 28px;
+  border-radius:999px; font-weight:700; font-size:13.5px; cursor:pointer; box-shadow:0 8px 18px rgba(0,157,209,0.3);
+  transition:transform .25s ease;
+}
+.load-more-btn:hover{ transform:translateY(-2px) scale(1.03); }
+.empty-state{ text-align:center; padding:60px 20px; color:var(--muted); font-size:13.5px;}
+
+/* scrollbar */
+::-webkit-scrollbar{ height:8px; width:8px;}
+::-webkit-scrollbar-thumb{ background:#c9d4e2; border-radius:8px;}
+
+/* reduced motion */
+@media (prefers-reduced-motion:reduce){
+  *{animation:none !important; transition:none !important;}
+}
+</style>
+</head>
+<body>
+
+<div class="navbar">
+  <div class="brand">
+    <div class="brand-icon">
+      <img src="data:image/jpeg;base64,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" alt="GoPay logo" style="width:100%;height:100%;object-fit:cover;border-radius:12px;" />
+    </div>
+    <div class="brand-text">
+      <h1>GoPay Insight</h1>
+      <span>User Insight Dashboard</span>
+    </div>
+  </div>
+  <div class="tabs" id="tabs">
+    <button class="tab-btn active" data-page="dashboard">Dashboard</button>
+    <button class="tab-btn" data-page="survei">Survei</button>
+    <button class="tab-btn" data-page="analisis">Analisis</button>
+    <button class="tab-btn" data-page="ulasan">Ulasan APK</button>
+  </div>
+</div>
+
+<!-- ================= PAGE 1: DASHBOARD ================= -->
+<div class="page active" id="page-dashboard">
+  <div class="page-head">
+    <div>
+      <h2>GoPay User Insight Dashboard</h2>
+      <p>Menganalisis kenyamanan, kepraktisan, performa biaya admin, dan tingkat keamanan aplikasi standalone GoPay.</p>
+    </div>
+    <div class="search-pill">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="chartSearch" placeholder="cari grafik..." />
+    </div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi-card c-lightblue">
+      <div class="kpi-icon-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+      <div class="kpi-label">Total Responden</div>
+      <div class="kpi-value c-green" data-count="116">0</div>
+      <div class="kpi-sub c-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>Data Survey</div>
+    </div>
+    <div class="kpi-card c-lightblue">
+      <div class="kpi-icon-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/></svg></div>
+      <div class="kpi-label">Total Ulasan APK</div>
+      <div class="kpi-value c-blue" data-count="224">0</div>
+      <div class="kpi-sub c-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/></svg>Web Scraping</div>
+    </div>
+    <div class="kpi-card c-cream">
+      <div class="kpi-icon-badge"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.63 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.63"/></svg></div>
+      <div class="kpi-label">Rata-rata Kepuasan</div>
+      <div class="kpi-value c-muted"><span data-count="3.91" data-decimal="1">0</span><span class="kpi-unit">/ 5.0</span></div>
+      <div class="kpi-sub c-muted">Indeks Mediator</div>
+    </div>
+    <div class="kpi-card c-green">
+      <div class="kpi-icon-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>
+      <div class="kpi-label">Sentimen Positif</div>
+      <div class="kpi-value c-green" data-count="72" data-suffix="%">0</div>
+      <div class="kpi-sub c-green">Mendominasi</div>
+    </div>
+    <div class="kpi-card c-pink">
+      <div class="kpi-icon-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>
+      <div class="kpi-label">Sentimen Negatif</div>
+      <div class="kpi-value c-neg" data-count="23" data-suffix="%">0</div>
+      <div class="kpi-sub c-neg">Perlu Perhatian</div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="chart-card" data-title="distribusi gender responden donut"><h3>Distribusi Gender Responden</h3><div class="chart-wrap"><canvas id="chartGender"></canvas></div></div>
+    <div class="chart-card" data-title="perbandingan pengguna sering jarang radar"><h3>Pengguna Sering vs Pengguna Jarang</h3><div class="chart-wrap"><canvas id="chartFreqRadar"></canvas></div></div>
+  </div>
+  <div class="grid2">
+    <div class="chart-card" data-title="analisis multidimensi performa radar"><h3>Analisis Multidimensi Performa GoPay</h3><div class="chart-wrap"><canvas id="chartMultiRadar"></canvas></div></div>
+    <div class="chart-card" data-title="kesenjangan kepuasan pilihan utama gap"><h3>Kesenjangan: Kepuasan vs Pilihan Utama</h3><div class="chart-wrap"><canvas id="chartGap"></canvas></div></div>
+  </div>
+  <div class="grid2">
+    <div class="chart-card" data-title="prioritas fitur bar performa"><h3>Analisis Strategis Prioritas Fitur GoPay</h3><div class="chart-wrap"><canvas id="chartFeatureBar"></canvas></div></div>
+    <div class="chart-card" data-title="prioritas tingkat pengaruh kepuasan line"><h3>Tingkat Pengaruh Terhadap Kepuasan</h3><div class="chart-wrap"><canvas id="chartInfluence"></canvas></div></div>
+  </div>
+  <div class="grid2">
+    <div class="chart-card" data-title="distribusi usia responden donut umur"><h3>Distribusi Usia Responden</h3><div class="chart-wrap"><canvas id="chartUsia"></canvas></div></div>
+    <div class="chart-card" data-title="distribusi rating ulasan apk bintang"><h3>Distribusi Rating Ulasan APK</h3><div class="chart-wrap"><canvas id="chartRatingDist"></canvas></div></div>
+  </div>
+</div>
+
+
+<!-- ================= PAGE 2: SURVEI ================= -->
+<div class="page" id="page-survei">
+  <div class="page-head">
+    <div>
+      <h2>Pemetaan Variabel</h2>
+      <p>Variabel laten yang membentuk indeks kepuasan &amp; loyalitas pengguna GoPay, disusun dari 20 pertanyaan kuesioner.</p>
+    </div>
+  </div>
+  <div class="var-chips">
+    <div class="chip x1">X1 &middot; Kualitas Sistem</div>
+    <div class="chip x2">X2 &middot; Nilai &amp; Keamanan</div>
+    <div class="chip m">M &middot; Kepuasan / Mediator</div>
+    <div class="chip y">Y &middot; Loyalitas</div>
+  </div>
+
+  <div class="chart-card" data-title="rata rata skor per variabel"><h3>Rata-rata Skor per Variabel</h3><div class="chart-wrap"><canvas id="chartVarBar"></canvas></div></div>
+  <div class="chart-card" data-title="rata rata skor per pertanyaan"><h3>Rata-rata Skor per Pertanyaan</h3><div class="chart-wrap qwrap"><canvas id="chartQBar"></canvas></div></div>
+  <div class="chart-card" data-title="analisis sentimen kuesioner stacked"><h3>Analisis Sentimen Kuesioner</h3><div class="chart-wrap"><canvas id="chartSentQ"></canvas></div></div>
+</div>
+
+<!-- ================= PAGE 3: ANALISIS ================= -->
+<div class="page" id="page-analisis">
+  <div class="page-head">
+    <div>
+      <h2>Analisis Insight &amp; Rekomendasi</h2>
+      <p>Dihasilkan otomatis berdasarkan data Survei &amp; Ulasan Play Store.</p>
+    </div>
+  </div>
+
+  <div class="insight-grid">
+    <div class="insight-card">
+      <h4><span class="badge-icon good">▲</span> Variabel Terbaik</h4>
+      <div class="insight-item"><span>Mudah Dipahami <b>(UI/UX)</b></span><span class="score good">4.40</span></div>
+      <div class="insight-item"><span><b>X1</b> Kualitas Sistem</span><span class="score good">4.28</span></div>
+      <div class="insight-item"><span>Efisiensi Waktu</span><span class="score good">4.32</span></div>
+      <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-top:10px;">Pengguna merasa GoPay mudah dipahami dan sistemnya cepat &amp; praktis &mdash; inilah fondasi kekuatan aplikasi.</p>
+    </div>
+    <div class="insight-card">
+      <h4><span class="badge-icon bad">▼</span> Variabel Terendah</h4>
+      <div class="insight-item"><span>Metode Pembayaran Utama</span><span class="score bad">3.36</span></div>
+      <div class="insight-item"><span>Pilihan Utama (Loyalitas)</span><span class="score bad">3.41</span></div>
+      <div class="insight-item"><span><b>Y</b> Loyalitas</span><span class="score bad">3.78</span></div>
+      <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-top:10px;">Meski puas, banyak pengguna belum menjadikan GoPay sebagai metode pembayaran utama sehari-hari.</p>
+    </div>
+  </div>
+
+  <div class="conclusion-card">
+    <h4>Kesimpulan Utama</h4>
+    <ul class="conclusion-list">
+      <li><span class="num">1</span>Kepuasan pengguna tinggi (M = 4.16) namun belum sepenuhnya berkonversi menjadi loyalitas penuh (Y = 3.78) &mdash; gap terbesar antara kepuasan dan pilihan utama terjadi pada segmen "Jarang" (gap 1.4).</li>
+      <li><span class="num">2</span>Kepraktisan (korelasi 0.62) adalah faktor paling berpengaruh terhadap kepuasan, diikuti Kecepatan dan Keamanan (masing-masing 0.52) &mdash; prioritaskan pengembangan pada tiga area ini.</li>
+      <li><span class="num">3</span>Promo &amp; Biaya Admin punya pengaruh paling kecil terhadap kepuasan (0.25&ndash;0.35), artinya strategi cashback bukan pengungkit utama loyalitas jangka panjang.</li>
+      <li><span class="num">4</span>Sentimen ulasan Play Store didominasi positif (72%), namun 23% ulasan negatif &mdash; umumnya soal iklan &amp; kendala teknis &mdash; tetap perlu ditindaklanjuti.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ================= PAGE 4: ULASAN APK ================= -->
+<div class="page" id="page-ulasan">
+  <div class="page-head">
+    <div>
+      <h2>Hasil Scraping Ulasan Google Playstore</h2>
+      <p>224 ulasan pengguna GoPay dari Google Play Store, dapat difilter berdasarkan sentimen dan dicari berdasarkan kata kunci.</p>
+    </div>
+  </div>
+
+  <div class="filter-row" id="filterRow">
+    <button class="filter-btn active" data-filter="Semua">Semua</button>
+    <button class="filter-btn f-pos" data-filter="Positif">Positif</button>
+    <button class="filter-btn f-net" data-filter="Netral">Netral</button>
+    <button class="filter-btn f-neg" data-filter="Negatif">Negatif</button>
+  </div>
+
+  <div class="search-pill" style="max-width:420px;margin-bottom:8px;">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input id="reviewSearch" placeholder="Cari kata kunci ulasan..." />
+  </div>
+  <div class="result-count" id="resultCount"></div>
+
+  <div class="review-grid" id="reviewGrid"></div>
+  <div class="load-more-wrap" id="loadMoreWrap">
+    <button class="load-more-btn" id="loadMoreBtn">Muat Lebih Banyak</button>
+  </div>
+</div>
+
+<script id="reviews-data" type="application/json">[{"nama_pengguna":"Ojay “Ojayy” Setiawan","rating":5.0,"ulasan":"Terbaik Tercepat Terpercaya...I Love Gopay 😘","tanggal":"2026-05-25 18:35","sentimen":"Positif"},{"nama_pengguna":"Annisa Sujono","rating":5.0,"ulasan":"lanncar bertransaksi","tanggal":"2026-05-25 18:30","sentimen":"Positif"},{"nama_pengguna":"Aril Bangko","rating":5.0,"ulasan":"gopay mantap","tanggal":"2026-05-25 18:26","sentimen":"Positif"},{"nama_pengguna":"Raffa Rizky Mahardika","rating":3.0,"ulasan":"masih ada iklannya","tanggal":"2026-05-25 18:18","sentimen":"Negatif"},{"nama_pengguna":"Reva Malinda","rating":5.0,"ulasan":"bagus","tanggal":"2026-05-25 18:14","sentimen":"Positif"},{"nama_pengguna":"Muhammad Ulwan","rating":1.0,"ulasan":"Saya transfer ke e-wallet lain disitu tertera terkena potongan Rp. 1000 oke saya setujui tetapi kenapa setelah di transfer terkena potongan Rp. 1000 lagi? jadi ptongannya Rp. 2000 bagaimana ini? saya transfer Rp. 50.000 dan di saldo Gopay saya ada Rp. 51.000 dan sudah berhasil ke transfer Rp. 50.000 karena Rp. 1000 bayar admin tetapi saat masuk e-wallet lain harusnya Rp. 50.000 tapi kenapa jadi Rp. 49.000? KORUPSI ANDA!!!","tanggal":"2026-05-25 18:09","sentimen":"Negatif"},{"nama_pengguna":"ariandi jr","rating":5.0,"ulasan":"good","tanggal":"2026-05-25 18:08","sentimen":"Positif"},{"nama_pengguna":"Angga Restu","rating":5.0,"ulasan":"sangat baik","tanggal":"2026-05-25 18:08","sentimen":"Positif"},{"nama_pengguna":"Mochamad Chodji Sartono","rating":5.0,"ulasan":"top","tanggal":"2026-05-25 18:04","sentimen":"Positif"},{"nama_pengguna":"Rissa Yumisapitri","rating":1.0,"ulasan":"gua saranin ga usah pake gopay bro, lu pada transfer uang tapi blm masuk ke bank karna ganguan gabakal balik duit,gua udah 20 hari kerja kga ada duit kembali,dimakan Ama pihak gopay,mending pake dana aja dana ga paket ribet bbrpa jam langsung kembali duit ga harus nunggu 15 kerja,intinya gopay tu maling duit kita kalo ada Kendala dalam transfer","tanggal":"2026-05-25 18:01","sentimen":"Negatif"},{"nama_pengguna":"Rid Wan","rating":5.0,"ulasan":"Gopay memang keren 👍👍👍","tanggal":"2026-05-25 17:58","sentimen":"Positif"},{"nama_pengguna":"Nhel Ru","rating":5.0,"ulasan":"Apk Bagus","tanggal":"2026-05-25 17:55","sentimen":"Positif"},{"nama_pengguna":"Dani Saudi","rating":1.0,"ulasan":"tidak dapat masuk,,dan mudah gangguab","tanggal":"2026-05-25 17:50","sentimen":"Negatif"},{"nama_pengguna":"mira ramadhani","rating":5.0,"ulasan":"bagus aplikasi nya","tanggal":"2026-05-25 17:48","sentimen":"Positif"},{"nama_pengguna":"Rudi Setiawan","rating":5.0,"ulasan":"sangar bagus dan cepat","tanggal":"2026-05-25 17:44","sentimen":"Positif"},{"nama_pengguna":"Firdaus Bengkel","rating":5.0,"ulasan":"mantap","tanggal":"2026-05-25 17:41","sentimen":"Positif"},{"nama_pengguna":"Kohar Udin","rating":5.0,"ulasan":"mantap betul gopay","tanggal":"2026-05-25 17:38","sentimen":"Positif"},{"nama_pengguna":"Anjar Juhana","rating":5.0,"ulasan":"sangat membantu","tanggal":"2026-05-25 17:34","sentimen":"Positif"},{"nama_pengguna":"Ahmad Ardi Raharjo","rating":5.0,"ulasan":"gopay keren banget,, mempermudah segala transaksi","tanggal":"2026-05-25 17:29","sentimen":"Positif"},{"nama_pengguna":"Kass Puul","rating":4.0,"ulasan":"sangat mudah digunakan","tanggal":"2026-05-25 17:07","sentimen":"Positif"},{"nama_pengguna":"Rel Mee","rating":5.0,"ulasan":"mudah tanpa ribet","tanggal":"2026-05-25 17:06","sentimen":"Positif"},{"nama_pengguna":"Diki Saputra","rating":5.0,"ulasan":"cukup baik","tanggal":"2026-05-25 17:04","sentimen":"Positif"},{"nama_pengguna":"Nurhayatii Laksmi","rating":5.0,"ulasan":"sangat puas","tanggal":"2026-05-25 17:01","sentimen":"Positif"},{"nama_pengguna":"Fauzi AL-malik","rating":5.0,"ulasan":"pake gopay praktis cepet ga pake lama...dan yang pasti muraaaaah","tanggal":"2026-05-25 16:58","sentimen":"Positif"},{"nama_pengguna":"Kusuma Kusuma","rating":5.0,"ulasan":"gampang sekali bt akun gopaynya ga ribet","tanggal":"2026-05-25 16:54","sentimen":"Negatif"},{"nama_pengguna":"Nikolaus Maspur Niko","rating":1.0,"ulasan":"aplikasi gila di pending 1 tahun gopay pinjam, dengan alasan yang gak jelas padahal pinjaman sudah di bayar lunas","tanggal":"2026-05-25 16:53","sentimen":"Negatif"},{"nama_pengguna":"Jepri","rating":3.0,"ulasan":"menarik","tanggal":"2026-05-25 16:42","sentimen":"Netral"},{"nama_pengguna":"Dei friadi Kahar","rating":5.0,"ulasan":"lancar dan nyaman","tanggal":"2026-05-25 16:41","sentimen":"Positif"},{"nama_pengguna":"Sheila Janet","rating":5.0,"ulasan":"lebih membantu utk semua transaksi","tanggal":"2026-05-25 16:41","sentimen":"Positif"},{"nama_pengguna":"Syaiful Bahri","rating":5.0,"ulasan":"nice 👍","tanggal":"2026-05-25 16:40","sentimen":"Positif"},{"nama_pengguna":"Dian Wardoyo","rating":4.0,"ulasan":"masih ada biaya admin","tanggal":"2026-05-25 16:33","sentimen":"Positif"},{"nama_pengguna":"Dede Suhendar","rating":1.0,"ulasan":"knp gangguan teknis terus kalau tf pake kiuris","tanggal":"2026-05-25 16:33","sentimen":"Negatif"},{"nama_pengguna":"cah ireng","rating":5.0,"ulasan":"enak apk nya","tanggal":"2026-05-25 16:20","sentimen":"Positif"},{"nama_pengguna":"Danzz Rahong","rating":5.0,"ulasan":"aplikasi ini bagus sekali","tanggal":"2026-05-25 16:19","sentimen":"Positif"},{"nama_pengguna":"Nur Hayanti123","rating":5.0,"ulasan":"hallo min aku balik komen lagi nihh btw kenapa min aku kab mau verifikasi ktp di gopay kok di tolak mulu minn padahal semua nya sudah jelas udah bener semua kok masih di tolak min tolong bantuan nya minn kenapa ya minn tolong dongg","tanggal":"2026-05-25 16:18","sentimen":"Positif"},{"nama_pengguna":"Cacan Kaciw","rating":5.0,"ulasan":"gampang upgrade premium nya mudah dan cepat","tanggal":"2026-05-25 16:17","sentimen":"Positif"},{"nama_pengguna":"Mantri Tri","rating":5.0,"ulasan":"kenapa gopay saya gak bisa transaksi ke sesama E.wallet eror terus tidak bisa transfer ke bank dan kemana pun . tolong bantuannya","tanggal":"2026-05-25 16:16","sentimen":"Negatif"},{"nama_pengguna":"Fathur Rahman","rating":5.0,"ulasan":"sangat bermanfaat","tanggal":"2026-05-25 16:16","sentimen":"Positif"},{"nama_pengguna":"Nia Mathilda","rating":2.0,"ulasan":"ga suka upgrade gopay plus harus pake KTP ga bsa double'","tanggal":"2026-05-25 16:09","sentimen":"Negatif"},{"nama_pengguna":"Yuddy W Dimitry","rating":5.0,"ulasan":"Gopay okeee🙏🏻👍👍👍","tanggal":"2026-05-25 16:06","sentimen":"Positif"},{"nama_pengguna":"Irfan Irfan","rating":1.0,"ulasan":"Aplikasi dongkol tidak bisa menangani permasalahan transaksi consumen kecewa","tanggal":"2026-05-25 16:04","sentimen":"Negatif"},{"nama_pengguna":"Iki Rizki","rating":4.0,"ulasan":"sangat bagus","tanggal":"2026-05-25 16:03","sentimen":"Positif"},{"nama_pengguna":"Azwar Tea","rating":5.0,"ulasan":"good lah bro","tanggal":"2026-05-25 16:02","sentimen":"Positif"},{"nama_pengguna":"yusup hermawan","rating":5.0,"ulasan":"Apresiasi...pake Gopay praktis cepat efisien ekonomis Aman..","tanggal":"2026-05-25 16:00","sentimen":"Positif"},{"nama_pengguna":"OKY YUDI FIRMANSYAH","rating":5.0,"ulasan":"so far so good","tanggal":"2026-05-25 15:55","sentimen":"Positif"},{"nama_pengguna":"robbyputrajt robbyputrajt27","rating":5.0,"ulasan":"baguss","tanggal":"2026-05-25 15:53","sentimen":"Positif"},{"nama_pengguna":"Hari Sayyidi","rating":5.0,"ulasan":"sangat bagus buat segala pembayaran","tanggal":"2026-05-25 15:51","sentimen":"Positif"},{"nama_pengguna":"Angel M","rating":1.0,"ulasan":"gopay tidak seperti Dana yg punya fitur dana cicil untuk pinjaman","tanggal":"2026-05-25 15:42","sentimen":"Negatif"},{"nama_pengguna":"Agus Tiawan","rating":1.0,"ulasan":"Hati-hati untuk mendownload apk ini, karena saldo anda bisa terpotong tanpa sepengetahuan anda meskipun keamanan 100% menggunakan sidik jari dan pin untuk pembayaran","tanggal":"2026-05-25 15:41","sentimen":"Negatif"},{"nama_pengguna":"Okta Realme","rating":5.0,"ulasan":"baik.","tanggal":"2026-05-25 15:36","sentimen":"Positif"},{"nama_pengguna":"Dhee","rating":5.0,"ulasan":"bagusan","tanggal":"2026-05-25 15:34","sentimen":"Positif"},{"nama_pengguna":"Iyus Supriatna","rating":5.0,"ulasan":"simple dan Aman","tanggal":"2026-05-25 15:33","sentimen":"Positif"},{"nama_pengguna":"enjos ando","rating":5.0,"ulasan":"praktis","tanggal":"2026-05-25 15:19","sentimen":"Positif"},{"nama_pengguna":"Lukman Nulhakim","rating":5.0,"ulasan":"aplikasi tempatnya penipuan transaksi, aplikasi ga jelas ga harus verifikasi KTP pas bikin , boleh gak pake nama asli, harusnya pembuatan dompet digital harus verifikasi KTP, SIM, Tinggal saat ini, bukan cuman nomor telepon, , jadi sarana transaksi penipuan lah ini aplikasi","tanggal":"2026-05-25 15:18","sentimen":"Negatif"},{"nama_pengguna":"buchek 08","rating":1.0,"ulasan":"mohon maaf pihak gopay tidak menyelesaikan masalah saldo saya yang terkuras di gopay dengan akunsaya yang bisa top up sendiri di aplikasi boss party padahal saya tidak mendownload aplikasi tersebut dan tidak bermain apak tersebut .. masalah tidak terselesaikan malah meminta di kasi bintang lewat email dana saya pun tidak kembali mending tidak pake gopay untuk transaksi atau menyimpan uang karena merugikan dan tidak ada jalan keluar yang helas di berikan oleh pihak gopay","tanggal":"2026-05-25 15:18","sentimen":"Negatif"},{"nama_pengguna":"ricki juliandi","rating":5.0,"ulasan":"mempermudah","tanggal":"2026-05-25 15:14","sentimen":"Positif"},{"nama_pengguna":"Kevin S","rating":1.0,"ulasan":"apk gajelas,pengajuan ditolak terus","tanggal":"2026-05-25 15:13","sentimen":"Negatif"},{"nama_pengguna":"fahmi mudopar","rating":5.0,"ulasan":"bagus dan sangat membantu .","tanggal":"2026-05-25 15:10","sentimen":"Positif"},{"nama_pengguna":"Ponorogo Kuat","rating":5.0,"ulasan":"gak mengecewakan pokoknya lewat aplikasi gopay","tanggal":"2026-05-25 15:08","sentimen":"Positif"},{"nama_pengguna":"Tommu Rolando","rating":5.0,"ulasan":"proses cepat","tanggal":"2026-05-25 14:57","sentimen":"Positif"},{"nama_pengguna":"Yusup 999","rating":5.0,"ulasan":"sangat mudah digunakan untuk trasfer antar bank","tanggal":"2026-05-25 14:56","sentimen":"Positif"},{"nama_pengguna":"Ninda Novitasari","rating":1.0,"ulasan":"uang sering hilang","tanggal":"2026-05-25 14:53","sentimen":"Negatif"},{"nama_pengguna":"Alwi","rating":5.0,"ulasan":"bagus👍🏻","tanggal":"2026-05-25 14:45","sentimen":"Positif"},{"nama_pengguna":"Power Rangers","rating":5.0,"ulasan":"Ok sip, mantap, sukses selalu buat developer nya, amiin.","tanggal":"2026-05-25 14:43","sentimen":"Positif"},{"nama_pengguna":"Afdal Ali","rating":1.0,"ulasan":"aplikasi bodoh, gua beli kouta keterangannya sukses, namun belum masuk koutanya, jadinya gua dobel belinya","tanggal":"2026-05-25 14:41","sentimen":"Negatif"},{"nama_pengguna":"Asd 123","rating":5.0,"ulasan":"mntap","tanggal":"2026-05-25 14:38","sentimen":"Positif"},{"nama_pengguna":"Ibrahim Husein","rating":5.0,"ulasan":"mantul","tanggal":"2026-05-25 14:38","sentimen":"Positif"},{"nama_pengguna":"Fahmi Firman","rating":5.0,"ulasan":"transaksi lancar tanpa kendala","tanggal":"2026-05-25 14:35","sentimen":"Positif"},{"nama_pengguna":"RENDY RIZKY","rating":1.0,"ulasan":"top up gopay 900k transaksi berhasil namun saldo tidak masuk sampai sekarang parah banget ini apk ngerugikan mending hapus aja jangan ada gopay!","tanggal":"2026-05-25 14:32","sentimen":"Negatif"},{"nama_pengguna":"Harjun Setiawan","rating":4.0,"ulasan":"goodd","tanggal":"2026-05-25 14:29","sentimen":"Positif"},{"nama_pengguna":"Cumplung86 Dion86","rating":5.0,"ulasan":"tingkatkan lagi yg lebih praktis dan banyak bonus","tanggal":"2026-05-25 14:23","sentimen":"Negatif"},{"nama_pengguna":"Donny Affandi","rating":5.0,"ulasan":"sukses","tanggal":"2026-05-25 14:21","sentimen":"Positif"},{"nama_pengguna":"Rista Rahayu","rating":5.0,"ulasan":"mudah di pahami","tanggal":"2026-05-25 14:20","sentimen":"Positif"},{"nama_pengguna":"peyek arjun","rating":5.0,"ulasan":"bagus sangat membantu","tanggal":"2026-05-25 14:20","sentimen":"Positif"},{"nama_pengguna":"Harry Irawan","rating":5.0,"ulasan":"awesome app,,love it recommend banget,,cool.","tanggal":"2026-05-25 14:19","sentimen":"Positif"},{"nama_pengguna":"alika ika","rating":5.0,"ulasan":"sangat bagus👍","tanggal":"2026-05-25 14:17","sentimen":"Positif"},{"nama_pengguna":"Robiatul Adawiyah","rating":5.0,"ulasan":"gopay pinjam selalu di tolak🤦‍♂️🤦‍♂️saya sudah lama gopay masih tetap di tolak","tanggal":"2026-05-25 14:14","sentimen":"Positif"},{"nama_pengguna":"rha nimra","rating":5.0,"ulasan":"aplikasi sangat baik","tanggal":"2026-05-25 14:12","sentimen":"Positif"},{"nama_pengguna":"agustinus Sedik","rating":5.0,"ulasan":"sangat opsional","tanggal":"2026-05-25 14:11","sentimen":"Positif"},{"nama_pengguna":"Ali Setiawan","rating":5.0,"ulasan":"mantap jaya","tanggal":"2026-05-25 14:06","sentimen":"Positif"},{"nama_pengguna":"Indra Saputra","rating":5.0,"ulasan":"bagus tapi sayang gk bisa pinjam uang","tanggal":"2026-05-25 13:42","sentimen":"Positif"},{"nama_pengguna":"Saman aja","rating":1.0,"ulasan":"pelayanan buruk banget","tanggal":"2026-05-25 13:41","sentimen":"Negatif"},{"nama_pengguna":"Fris Carini","rating":5.0,"ulasan":"bagus buat transaksi apapun semoga lancar terus n sukses","tanggal":"2026-05-25 13:37","sentimen":"Positif"},{"nama_pengguna":"Thrisha Zulaika Putri","rating":2.0,"ulasan":"bagus, tapi minusnya cashback suka tidak balik, padahal sudah sesuai syarat, sudah 2 hari dilaporkan tidak masuk","tanggal":"2026-05-25 13:35","sentimen":"Negatif"},{"nama_pengguna":"Aji Liantoro","rating":5.0,"ulasan":"sangat puas dan menguntungkan","tanggal":"2026-05-25 13:35","sentimen":"Positif"},{"nama_pengguna":"Solihin Lalu","rating":5.0,"ulasan":"mantap ,semua jadi mudah","tanggal":"2026-05-25 13:34","sentimen":"Positif"},{"nama_pengguna":"Lim Wendy","rating":5.0,"ulasan":"Relatif cepat dan tanpa biaya admin","tanggal":"2026-05-25 13:34","sentimen":"Positif"},{"nama_pengguna":"Timotius Tandono","rating":5.0,"ulasan":"Sekarang jarang ada promo","tanggal":"2026-05-25 13:34","sentimen":"Positif"},{"nama_pengguna":"Gugun Gunawan","rating":5.0,"ulasan":"gampang digunakan","tanggal":"2026-05-25 13:32","sentimen":"Positif"},{"nama_pengguna":"suherlan","rating":5.0,"ulasan":"sat set gak pake ribet... oke banget","tanggal":"2026-05-25 13:28","sentimen":"Positif"},{"nama_pengguna":"Panji Eko","rating":5.0,"ulasan":"goodddddd....","tanggal":"2026-05-25 13:25","sentimen":"Positif"},{"nama_pengguna":"Nanung Mubasyiroh","rating":5.0,"ulasan":"bisa membantu mungkin situasi yang sulit","tanggal":"2026-05-25 13:22","sentimen":"Positif"},{"nama_pengguna":"Kim Nana","rating":2.0,"ulasan":"main game dapat koin tp koinnya gak bertambah","tanggal":"2026-05-25 13:17","sentimen":"Negatif"},{"nama_pengguna":"Maman Suherman","rating":5.0,"ulasan":"Bagus cepat dan mudah digunakan","tanggal":"2026-05-25 13:13","sentimen":"Positif"},{"nama_pengguna":"Nagori aruan (Aruan Nagori)","rating":5.0,"ulasan":"top mempermudah pembayaran","tanggal":"2026-05-25 13:12","sentimen":"Positif"},{"nama_pengguna":"Abbian zio Pratama","rating":5.0,"ulasan":"sangat membantu ...","tanggal":"2026-05-25 13:11","sentimen":"Positif"},{"nama_pengguna":"Sudin Haryanto","rating":1.0,"ulasan":"ini knpa ya Bru instal sdo hilang semua ga transaksi ga. apa bgtu masuk sdo hbis","tanggal":"2026-05-25 13:02","sentimen":"Negatif"},{"nama_pengguna":"Sari Anto","rating":5.0,"ulasan":"cukup puas","tanggal":"2026-05-25 13:02","sentimen":"Positif"},{"nama_pengguna":"Mujibakti Wicaksana","rating":5.0,"ulasan":"ewallet paling enak sih sumpah","tanggal":"2026-05-25 13:01","sentimen":"Positif"},{"nama_pengguna":"Iwan Kurniawan","rating":5.0,"ulasan":"sangat puas dan sangat membantu,.. ga takut duit hilang di gopay","tanggal":"2026-05-25 12:58","sentimen":"Positif"},{"nama_pengguna":"Edy Suyanto","rating":5.0,"ulasan":"ok bgt transaksi cepat dan akurat, transfer gratis.mantap lanjutkan 👍👍👍","tanggal":"2026-05-25 12:58","sentimen":"Positif"},{"nama_pengguna":"Ning Retno","rating":5.0,"ulasan":"Gopay Top Markotop👍🏿","tanggal":"2026-05-25 12:51","sentimen":"Positif"},{"nama_pengguna":"Hasan Tekhel","rating":5.0,"ulasan":"TERBAIK","tanggal":"2026-05-25 12:49","sentimen":"Positif"},{"nama_pengguna":"Ayu Rahma Yunita","rating":5.0,"ulasan":"bagus bangeet","tanggal":"2026-05-25 12:49","sentimen":"Positif"},{"nama_pengguna":"Zulki Zulkif","rating":5.0,"ulasan":"baik dan sangat murah","tanggal":"2026-05-25 12:45","sentimen":"Positif"},{"nama_pengguna":"egi egr","rating":5.0,"ulasan":"aplikasih nya bagus","tanggal":"2026-05-25 12:43","sentimen":"Positif"},{"nama_pengguna":"Syamsularifin Arifin","rating":1.0,"ulasan":"saldo kepotong tanpa ada pemberitahuan","tanggal":"2026-05-25 12:37","sentimen":"Negatif"},{"nama_pengguna":"narreee kinarr","rating":1.0,"ulasan":"ngeselin bgt nih aplikasih iklan nya, g pencet apapun tiba' ke download. udah kejadian 3 kali jadi stop bikin iklan yg maksa biar orang' download aplikasi ini.","tanggal":"2026-05-25 12:36","sentimen":"Negatif"},{"nama_pengguna":"NOOB Gaming","rating":5.0,"ulasan":"mantapppps","tanggal":"2026-05-25 12:35","sentimen":"Positif"},{"nama_pengguna":"Juliyana Ana","rating":3.0,"ulasan":"sangat bagus aplikasi gopay kesukaan saya tapi sayang saya gx bisa pinjaman.","tanggal":"2026-05-25 12:32","sentimen":"Netral"},{"nama_pengguna":"naning ardiyanti","rating":5.0,"ulasan":"bagus banget aplikasi","tanggal":"2026-05-25 12:30","sentimen":"Positif"},{"nama_pengguna":"I Komang Angga Raditya","rating":1.0,"ulasan":"iklan meresahkan, maksa teros","tanggal":"2026-05-25 12:30","sentimen":"Negatif"},{"nama_pengguna":"Dian","rating":3.0,"ulasan":"belum puas","tanggal":"2026-05-25 12:26","sentimen":"Netral"},{"nama_pengguna":"Bismo Novak","rating":5.0,"ulasan":"mantab, cepat, murah","tanggal":"2026-05-25 12:26","sentimen":"Positif"},{"nama_pengguna":"Dedi Nurhakim","rating":4.0,"ulasan":"josss","tanggal":"2026-05-25 12:21","sentimen":"Positif"},{"nama_pengguna":"hendri suhandah","rating":5.0,"ulasan":"Cepatttt","tanggal":"2026-05-25 12:20","sentimen":"Positif"},{"nama_pengguna":"Alviano 03","rating":5.0,"ulasan":"bagus sekali sebagai transaksi","tanggal":"2026-05-25 12:20","sentimen":"Positif"},{"nama_pengguna":"Bagas gantenggg","rating":5.0,"ulasan":"hebat","tanggal":"2026-05-25 12:16","sentimen":"Positif"},{"nama_pengguna":"Yuda Ari prastyo zai","rating":5.0,"ulasan":"Sangat Membantu","tanggal":"2026-05-25 12:16","sentimen":"Positif"},{"nama_pengguna":"Peri Can","rating":5.0,"ulasan":"pokoknya gercep gopay top terbaiik","tanggal":"2026-05-25 12:15","sentimen":"Positif"},{"nama_pengguna":"Zidan","rating":5.0,"ulasan":"selama saya menggunakan aplikasi ini untuk transaksi aman aman saja dan mudah serta cepat","tanggal":"2026-05-25 12:14","sentimen":"Positif"},{"nama_pengguna":"Abdul Arif","rating":3.0,"ulasan":"okelah","tanggal":"2026-05-25 12:12","sentimen":"Netral"},{"nama_pengguna":"Arif Safrudin","rating":1.0,"ulasan":"sudah 5 tahun lebih saya pakai gopay... tapi Paylayer nya ga bisa d aktif kan...","tanggal":"2026-05-25 12:12","sentimen":"Negatif"},{"nama_pengguna":"sri wulansari","rating":5.0,"ulasan":"sejauh ini baik, dan harga bersaing dri aplikasi lain. tapi mintol min, klo ada perbaikan, jgn lama2 dong min. kadang mau smpe satu harian. pling sring dipengisian plsa dan paket data, jdiny pelanggan kecewa dong, aplagi akhir2 ini, mau lbh dr satu kali dlm satu hari perbaikan. klo gini terus, planggan bisa lari kelain orng. mintol ia min, thanks","tanggal":"2026-05-25 12:11","sentimen":"Negatif"},{"nama_pengguna":"zoom mz","rating":1.0,"ulasan":"1aja Soalnya saldo saya blm masuk sebesar 5jt saya top up dari dana sebesar 5jt di akun dana udh berhasil ga ada kesalahan sedikit pun tapi di gopay ga ada dan bukti transaksi nya pun ga ada. ini sama aja penggelapan saldo","tanggal":"2026-05-25 12:09","sentimen":"Negatif"},{"nama_pengguna":"Indra Kusuma","rating":1.0,"ulasan":"aplikasi keuangan paling bodoh sedunia!!! mau tf ke orang dikasih ***. gimana bisa kita bisa pastikan ga salah orang. Riwayat tf pun sampai saat ini ga bisa dihapus!!! percuma dikomplain di CS","tanggal":"2026-05-25 12:04","sentimen":"Negatif"},{"nama_pengguna":"Sumarsih","rating":5.0,"ulasan":"mantap 👍","tanggal":"2026-05-25 12:00","sentimen":"Positif"},{"nama_pengguna":"Rakha","rating":1.0,"ulasan":"saldo gopay saya ilang dan ga ngerasa menggunakan nya, ini gopay ga ada tanggung jawab nya ya","tanggal":"2026-05-25 11:57","sentimen":"Negatif"},{"nama_pengguna":"Raja Ismatulloh","rating":5.0,"ulasan":"terima kasih the best gopay","tanggal":"2026-05-25 11:53","sentimen":"Positif"},{"nama_pengguna":"Firman Ilahi","rating":5.0,"ulasan":"Transaksi nya cepat,bagus banget","tanggal":"2026-05-25 11:53","sentimen":"Positif"},{"nama_pengguna":"Arisaburani Aris","rating":5.0,"ulasan":"Aplikasih mudah dan Aman untuk di gunakan.!!!","tanggal":"2026-05-25 11:43","sentimen":"Positif"},{"nama_pengguna":"Nur Wahid","rating":3.0,"ulasan":"saya msh kesulitan transaksi dg QR kerena terhambat notifikasi peringatan","tanggal":"2026-05-25 11:41","sentimen":"Netral"},{"nama_pengguna":"SERVICE HaPe","rating":5.0,"ulasan":"jos cepat","tanggal":"2026-05-25 11:37","sentimen":"Positif"},{"nama_pengguna":"Oggy Cmr14","rating":5.0,"ulasan":"mantap lah.. semoga bisa di lancarkar gopay pinjam.nya. 😁😁😁👍","tanggal":"2026-05-25 11:28","sentimen":"Positif"},{"nama_pengguna":"Budrawan Wan","rating":5.0,"ulasan":"baik sekali","tanggal":"2026-05-25 11:22","sentimen":"Positif"},{"nama_pengguna":"Singgih Ahmad","rating":5.0,"ulasan":"ANDALAN✨","tanggal":"2026-05-25 11:14","sentimen":"Positif"},{"nama_pengguna":"Rajo Bintang","rating":5.0,"ulasan":"karna kalau top up game itu ada promonya murah lagi","tanggal":"2026-05-25 11:00","sentimen":"Negatif"},{"nama_pengguna":"Made S","rating":5.0,"ulasan":"puas","tanggal":"2026-05-25 10:57","sentimen":"Positif"},{"nama_pengguna":"Mas Botoll","rating":1.0,"ulasan":"apa apa kena potongan .. mau make gopay latter pun pilih pilih ribet gak kaya apk sebelah","tanggal":"2026-05-25 10:39","sentimen":"Negatif"},{"nama_pengguna":"Andre Agus","rating":5.0,"ulasan":"sangat praktis pake apk ini","tanggal":"2026-05-25 10:37","sentimen":"Positif"},{"nama_pengguna":"Piter Lontar","rating":4.0,"ulasan":"update terus dan memudahkan konsumen dalam menggunakan aplikasi ini","tanggal":"2026-05-25 10:34","sentimen":"Positif"},{"nama_pengguna":"andriani baiq","rating":5.0,"ulasan":"setiap transaksi lancar","tanggal":"2026-05-25 10:32","sentimen":"Positif"},{"nama_pengguna":"yasin iri yanto","rating":5.0,"ulasan":"mantap prosesnya cepat Poto burem juga bisa kebaca hebat gopay","tanggal":"2026-05-25 10:31","sentimen":"Positif"},{"nama_pengguna":"Frengki patras","rating":5.0,"ulasan":"aplikasi yg sangat membantu dlm hal menyimpan uang,dan sangat mudah di operasikan.khususnya buat narik uang di aplikasi game online,cepat banget prosesnya.makasih buat gopay🙏","tanggal":"2026-05-25 10:30","sentimen":"Positif"},{"nama_pengguna":"I Gede Bayu Saputra","rating":5.0,"ulasan":"mantaf","tanggal":"2026-05-25 10:28","sentimen":"Positif"},{"nama_pengguna":"M.Khoirul Bariyah","rating":3.0,"ulasan":"saya kirim uang lewat shoppepay ke gopay gk bisa dan belum masuk ke gopay saya, gopay saya tidak bisa top up sudah limit dan saya mau setoran kerja jadi tidak bisa, apa ada solusi buat saya 🙏 tolong di balas cepat min bantu saya","tanggal":"2026-05-25 10:27","sentimen":"Netral"},{"nama_pengguna":"Imamaji Purnomo","rating":1.0,"ulasan":"kocak ni aplikasi, kirim uang dr wallet ke gopay biaya admin 999. udah bayar admin ,udah masuk ke aplikasi gopay yg tadinya krim 20.000 malah jadi 19.001 ,kocak abis deh. nyesel pake gopay","tanggal":"2026-05-25 10:14","sentimen":"Negatif"},{"nama_pengguna":"Tary Manies","rating":3.0,"ulasan":"aq da pakai gopay 5 tahun,tp ntah kenapa tiba2 diblok,ga pernah telat bayar ,ya setahu aq ga pernah buat masalah,katanya diblok nya cuma 7 hari,tp kenyataan nya sudah mau 2 bulan itu tetap aja diblom","tanggal":"2026-05-25 10:11","sentimen":"Netral"},{"nama_pengguna":"Mbak Musiyam","rating":5.0,"ulasan":"Luar biasa l","tanggal":"2026-05-25 10:08","sentimen":"Positif"},{"nama_pengguna":"Forsad_depok","rating":1.0,"ulasan":"taiii","tanggal":"2026-05-25 10:02","sentimen":"Negatif"},{"nama_pengguna":"Fikry Jr","rating":5.0,"ulasan":"sangat membantu dalam bisnis kecil saya","tanggal":"2026-05-25 10:00","sentimen":"Positif"},{"nama_pengguna":"Ulfa Ulfa","rating":5.0,"ulasan":"gak pakai ribet","tanggal":"2026-05-25 09:59","sentimen":"Negatif"},{"nama_pengguna":"Mimin","rating":5.0,"ulasan":"Aplikasi yang bagus","tanggal":"2026-05-25 09:55","sentimen":"Positif"},{"nama_pengguna":"Pondok Apase","rating":5.0,"ulasan":"cepat aman dan mudah","tanggal":"2026-05-25 09:54","sentimen":"Positif"},{"nama_pengguna":"Iqbal Maulana","rating":5.0,"ulasan":"transaksi mudah keren","tanggal":"2026-05-25 09:51","sentimen":"Positif"},{"nama_pengguna":"Sukiriati Tati","rating":1.0,"ulasan":"aduh saldo saya gak bisa di apa\"in karena saya lupa pin dan nomor hp sudah hilang yg ada cuman email aja,mau ganti nomor hp gak bisa\" karena makin di persulit sama customer service nya","tanggal":"2026-05-25 09:50","sentimen":"Negatif"},{"nama_pengguna":"M.S Kilwarany, SE","rating":5.0,"ulasan":"GoPay terbaik👍👍👍👍👍","tanggal":"2026-05-25 09:49","sentimen":"Positif"},{"nama_pengguna":"Ar dian","rating":1.0,"ulasan":"benci bnget nih aplikasi kenapa setiap punya saldo ditrik terus menerus tanpa ada persetujuan transaksi","tanggal":"2026-05-25 09:47","sentimen":"Negatif"},{"nama_pengguna":"Tomi Wibowo","rating":5.0,"ulasan":"simple dan brav0","tanggal":"2026-05-25 09:44","sentimen":"Positif"},{"nama_pengguna":"Lili Yana","rating":5.0,"ulasan":"suka banget SM gopay,, lancar ga ribet","tanggal":"2026-05-25 09:40","sentimen":"Positif"},{"nama_pengguna":"Edy AD","rating":5.0,"ulasan":"Good","tanggal":"2026-05-25 09:34","sentimen":"Positif"},{"nama_pengguna":"RILLYAN.BERHITU","rating":5.0,"ulasan":"baikk","tanggal":"2026-05-25 09:21","sentimen":"Positif"},{"nama_pengguna":"Tri Purwanto","rating":5.0,"ulasan":"bagus sekali","tanggal":"2026-05-25 09:06","sentimen":"Positif"},{"nama_pengguna":"Wiwin Wildaningsih","rating":5.0,"ulasan":"gopay memang 👍💯","tanggal":"2026-05-25 09:04","sentimen":"Positif"},{"nama_pengguna":"Setiadi Yadi","rating":2.0,"ulasan":"GK amanah","tanggal":"2026-05-25 09:02","sentimen":"Negatif"},{"nama_pengguna":"vi vivoy53","rating":5.0,"ulasan":"bagus sekali aku kasih bintang 5","tanggal":"2026-05-25 09:01","sentimen":"Positif"},{"nama_pengguna":"Anindya zahra","rating":5.0,"ulasan":"lebih irit,dan praktis","tanggal":"2026-05-25 08:58","sentimen":"Positif"},{"nama_pengguna":"suhar bambang tejo","rating":5.0,"ulasan":"sangat memuaskan untuk aplikasinya dan gampang di instal juga","tanggal":"2026-05-25 08:50","sentimen":"Positif"},{"nama_pengguna":"Yuti Mani jamasi","rating":5.0,"ulasan":"sangat aman dan murah","tanggal":"2026-05-25 08:41","sentimen":"Positif"},{"nama_pengguna":"Jofandi Fernando","rating":1.0,"ulasan":"gak ada artikel \"saldo saya hilang\" di pusat bantuan","tanggal":"2026-05-25 08:40","sentimen":"Negatif"},{"nama_pengguna":"Jefri Tanjung","rating":5.0,"ulasan":"mantapppp","tanggal":"2026-05-25 08:35","sentimen":"Positif"},{"nama_pengguna":"Dame Kurniasih","rating":5.0,"ulasan":"Aplikasi ewallet yang sangat bagus dan membantu. Penggunaan nya mudah dan tampilan yang mudah di pahami","tanggal":"2026-05-25 08:33","sentimen":"Positif"},{"nama_pengguna":"Fitri Kasman","rating":5.0,"ulasan":"sangat menyenangkan","tanggal":"2026-05-25 08:20","sentimen":"Positif"},{"nama_pengguna":"Ambaykk122 Ambaykk223","rating":5.0,"ulasan":"sya sangat suka dengan aplikasi ini","tanggal":"2026-05-25 08:19","sentimen":"Positif"},{"nama_pengguna":"Lovely Debby","rating":5.0,"ulasan":"Apk yg bagus sangat banyak manfaatnya.. Fitur2nya sangat mudah digunakan moga kedepannya tambah maju👍🏻👍🏻","tanggal":"2026-05-25 08:07","sentimen":"Positif"},{"nama_pengguna":"Rizkon Palioi","rating":5.0,"ulasan":"transaksi cepat n aman","tanggal":"2026-05-25 08:05","sentimen":"Positif"},{"nama_pengguna":"dhannyse 1971","rating":5.0,"ulasan":"simpel","tanggal":"2026-05-25 07:57","sentimen":"Positif"},{"nama_pengguna":"Mirsa Rianto","rating":5.0,"ulasan":"aplikasinya Sangat bagus dan cepat dan responsif,","tanggal":"2026-05-25 07:55","sentimen":"Positif"},{"nama_pengguna":"Jhonsena 222","rating":1.0,"ulasan":"gua waktu mau top up game lama banget loading nya","tanggal":"2026-05-25 07:40","sentimen":"Negatif"},{"nama_pengguna":"Beben Suganda","rating":5.0,"ulasan":"sangat bagus pelayanan nya","tanggal":"2026-05-25 07:39","sentimen":"Positif"},{"nama_pengguna":"Muhammad Vir nanda","rating":3.0,"ulasan":"biasa aja","tanggal":"2026-05-25 07:32","sentimen":"Netral"},{"nama_pengguna":"Anjay Mabar","rating":5.0,"ulasan":"saya cukup puas sm layanan gopay soalnya gratis trf ke semua bank klopun ada biaya admin ke aplikasi lain cuman seribu makasih gopay","tanggal":"2026-05-25 07:30","sentimen":"Positif"},{"nama_pengguna":"Muhammad Ismail Wicaksono","rating":5.0,"ulasan":"tolong di perbaiki lgi sistem gopay ini masa mau transfer ke bca dalam perbaikan terus hadeh","tanggal":"2026-05-25 07:28","sentimen":"Positif"},{"nama_pengguna":"Rohman Bontot4","rating":4.0,"ulasan":"mantep","tanggal":"2026-05-25 07:22","sentimen":"Positif"},{"nama_pengguna":"narapati kenzie","rating":5.0,"ulasan":"bagus aplikasi ini bisa top up beli makan dll","tanggal":"2026-05-25 07:20","sentimen":"Positif"},{"nama_pengguna":"Aboy Aboy","rating":5.0,"ulasan":"baguss mantapp sip","tanggal":"2026-05-25 07:18","sentimen":"Positif"},{"nama_pengguna":"Feriandika purba39","rating":5.0,"ulasan":"oke mantap pakai aplikasi Gopay aman dan terpercaya","tanggal":"2026-05-25 07:14","sentimen":"Positif"},{"nama_pengguna":"Amirah Hafifah","rating":5.0,"ulasan":"bagus bangetttt","tanggal":"2026-05-25 07:14","sentimen":"Positif"},{"nama_pengguna":"Hamka Hasan","rating":5.0,"ulasan":"lancar jaya","tanggal":"2026-05-25 07:08","sentimen":"Positif"},{"nama_pengguna":"rendra maulana","rating":5.0,"ulasan":"sangat bagus dan aman","tanggal":"2026-05-25 07:03","sentimen":"Positif"},{"nama_pengguna":"Dony Naggra","rating":5.0,"ulasan":"saya sangat puas pake gopay","tanggal":"2026-05-25 07:00","sentimen":"Positif"},{"nama_pengguna":"Daffa Ibnu","rating":1.0,"ulasan":"akun gw di bobol orang tidak dikenal masak aku baru top up 23.000 langsung hilang 16.000","tanggal":"2026-05-25 07:00","sentimen":"Negatif"},{"nama_pengguna":"Hamran Djapardi Hamran","rating":5.0,"ulasan":"mempermudahkan bertransaksi bisnis.","tanggal":"2026-05-25 07:00","sentimen":"Positif"},{"nama_pengguna":"Zahirfadhil 2601","rating":3.0,"ulasan":"KENAPA SAYA TIDAK MENDAPATKAN KODE OTP? PADAHAL GOPAY DAH BARU WHATSAPP JUGA UDAH DI UPDATE MASIH GAK MASUK KODE OTP NYA DARI KEMAREN","tanggal":"2026-05-25 06:57","sentimen":"Netral"},{"nama_pengguna":"JUNAIDY EKO","rating":1.0,"ulasan":"topup ga masuk2, gatau urgent apa","tanggal":"2026-05-25 06:54","sentimen":"Negatif"},{"nama_pengguna":"Tanto Otnatsah","rating":4.0,"ulasan":"BAGUSAN PEMBAYARAN LEBIH GAMPANG DAN HEMAT 👍","tanggal":"2026-05-25 06:54","sentimen":"Positif"},{"nama_pengguna":"ChaneL Bang_benz","rating":5.0,"ulasan":"sangat memabntu","tanggal":"2026-05-25 06:53","sentimen":"Positif"},{"nama_pengguna":"Mas Mas","rating":1.0,"ulasan":"top up gopay ga masuk2 udah berapa hari, CS nya bot lagi. gaada kejelasan kalo ada masalah apa2. bintang 1 udah paling bener","tanggal":"2026-05-25 06:52","sentimen":"Negatif"},{"nama_pengguna":"eful saefuloh","rating":5.0,"ulasan":"cepat dan baik","tanggal":"2026-05-25 06:46","sentimen":"Positif"},{"nama_pengguna":"Jumin Sus","rating":5.0,"ulasan":"sangat ok sekali praktis dan mudah","tanggal":"2026-05-25 06:43","sentimen":"Positif"},{"nama_pengguna":"Eveline Lumowa","rating":5.0,"ulasan":"bagus bisa untuk semua umur","tanggal":"2026-05-25 06:34","sentimen":"Positif"},{"nama_pengguna":"Lz Ibra","rating":5.0,"ulasan":"saya top up gopay dari dana belum masuk ke gopaynya ,padahal status transfer berhasil dari dana ke gopay doriwayat transaksi tapi kenapa di gopay belum masuk diriwayat pun gak ada laporan uang masuk,malah disuruh nunggu waktu 2hr kerja apa2 an GOPAY ini,kalo lagi urgent gimana,mana layanan cs nya kita gak bisa ngetik saya kasih 5 biar dibaca setelah nya bintangnya saya turunkan jadi 1 bintang aja","tanggal":"2026-05-25 06:25","sentimen":"Negatif"},{"nama_pengguna":"Asep Saepudin","rating":5.0,"ulasan":"sangat ngebantu sekali","tanggal":"2026-05-25 06:23","sentimen":"Positif"},{"nama_pengguna":"Yuni Yuni","rating":5.0,"ulasan":"dengan gopay segalanya lancar ,","tanggal":"2026-05-25 06:17","sentimen":"Positif"},{"nama_pengguna":"ariando febri","rating":1.0,"ulasan":"sangat buruk uang lama mask","tanggal":"2026-05-25 06:17","sentimen":"Negatif"},{"nama_pengguna":"Cepets Cepets","rating":1.0,"ulasan":"tidak memuaskan bagi pengguna gopay","tanggal":"2026-05-25 06:11","sentimen":"Negatif"},{"nama_pengguna":"Wiwik Andayana","rating":5.0,"ulasan":"aplikasinya bagus sekali saya puas dengan sistemnya","tanggal":"2026-05-25 06:10","sentimen":"Positif"},{"nama_pengguna":"Khoirul Munir","rating":5.0,"ulasan":"bagus cepat","tanggal":"2026-05-25 06:10","sentimen":"Positif"},{"nama_pengguna":"Dede Ais","rating":5.0,"ulasan":"sangat menarik","tanggal":"2026-05-25 06:06","sentimen":"Positif"},{"nama_pengguna":"Hendri Dinata","rating":5.0,"ulasan":"Gopay Top Lah Ok","tanggal":"2026-05-25 05:58","sentimen":"Positif"},{"nama_pengguna":"Zho Burgerkill","rating":1.0,"ulasan":"anehh.. bisa nya s.x pinjam doang, mau pinjam ke 2x y malah ga bisa. nunggu y lama bgt lg ampe 3bulan. pdahal awal minjem ga gede cuma 200 ga sampe telat malah langsung dilunasin. ke 2x y malah ga bisa minjem lg.","tanggal":"2026-05-25 05:54","sentimen":"Negatif"},{"nama_pengguna":"Ihsan Hidayatulloh","rating":5.0,"ulasan":"mantap pokonamah","tanggal":"2026-05-25 05:48","sentimen":"Positif"},{"nama_pengguna":"bramantyo hafidz","rating":5.0,"ulasan":"sudah ok dan mantab","tanggal":"2026-05-25 05:45","sentimen":"Positif"},{"nama_pengguna":"sapriyandi nata","rating":5.0,"ulasan":"mudah & cepat","tanggal":"2026-05-25 05:43","sentimen":"Positif"},{"nama_pengguna":"Kentris Jore","rating":1.0,"ulasan":"saya mau transfer ke akun gopay malah setingan nya otomatis transfer ke bank","tanggal":"2026-05-25 05:42","sentimen":"Negatif"},{"nama_pengguna":"mas bendhot","rating":5.0,"ulasan":"sangat mudah dan cepat","tanggal":"2026-05-25 05:41","sentimen":"Positif"},{"nama_pengguna":"Sadi Heri","rating":1.0,"ulasan":"gopay ini ngebug apa gimana?? , aku isi saldo 500rb ke pakai cuma 386rb kok sisa 102rb lagi si, rada kecewa si, padahal ga buat beli apa apa, di apl gopay nya juga kepake cuman 386rb, harus nya sisa nya 124 rb lah mungkin, kok malah jadi 102rb.","tanggal":"2026-05-25 05:29","sentimen":"Negatif"},{"nama_pengguna":"Kopi Manis","rating":1.0,"ulasan":"tidak pernah bayar telat selalu sebelum japo begitu dilunasi tidak bisa pinjam lagi !! ingin aku hapus aplikasinya dan data nya bagaiman takut di salahgunakan","tanggal":"2026-05-25 05:28","sentimen":"Negatif"},{"nama_pengguna":"Dasun","rating":3.0,"ulasan":"Sangat membantu ku dalam menyelesaikan metode pembayaran tapi aplikasi ini saat scanner terlalu lama untuk bisa mengakses nya","tanggal":"2026-05-25 05:26","sentimen":"Netral"},{"nama_pengguna":"Alexandria fz","rating":1.0,"ulasan":"ini aplikasi penipuan banget, saya sudah bayar tagihan air pam bulan mei, tapi masih muncul lagi tagihan untuk bulan mei. sudah lapor ke cs nya gak mau tanggung jawab, malah saya di suruh hubungi gotagihan.","tanggal":"2026-05-25 05:23","sentimen":"Negatif"},{"nama_pengguna":"Suratno","rating":5.0,"ulasan":"saya coba pakai gopay sangat membantu","tanggal":"2026-05-25 05:17","sentimen":"Positif"},{"nama_pengguna":"Said Anursi","rating":5.0,"ulasan":"bagus banget untuk nyimpan uang untuk keperluan agar tidak hilang ","tanggal":"2026-05-25 05:17","sentimen":"Positif"},{"nama_pengguna":"A.B Santoso","rating":5.0,"ulasan":"bayar apapun lancar car car....","tanggal":"2026-05-25 05:13","sentimen":"Positif"},{"nama_pengguna":"James Ema","rating":5.0,"ulasan":"mantap sangat mudah dan lancar untuk transaksi ke mana saja","tanggal":"2026-05-25 05:11","sentimen":"Positif"}]</script>
+<script>
+/* ================= NAV / TAB SWITCHING ================= */
+const tabs = document.querySelectorAll('.tab-btn');
+const pages = document.querySelectorAll('.page');
+tabs.forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    tabs.forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    pages.forEach(p=>p.classList.remove('active'));
+    const target = document.getElementById('page-'+btn.dataset.page);
+    target.classList.add('active');
+    revealCharts(target);
+    if(btn.dataset.page==='dashboard') animateCounters(target);
+  });
+});
+
+/* ================= KPI COUNT-UP ANIMATION ================= */
+function animateCounters(scope){
+  scope.querySelectorAll('[data-count]').forEach(el=>{
+    if(el.dataset.done) return;
+    el.dataset.done='1';
+    const end = parseFloat(el.dataset.count);
+    const decimals = el.dataset.decimal ? 1 : 0;
+    const suffix = el.dataset.suffix || '';
+    const duration = 1100;
+    const start = performance.now();
+    function tick(now){
+      const p = Math.min((now-start)/duration,1);
+      const eased = 1 - Math.pow(1-p,3);
+      const val = end*eased;
+      el.textContent = (decimals? val.toFixed(1): Math.round(val)) + suffix;
+      if(p<1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  });
+}
+
+/* ================= CHART CARD REVEAL (staggered) ================= */
+function revealCharts(scope){
+  const cards = scope.querySelectorAll('.chart-card:not(.reveal)');
+  cards.forEach((c,i)=>{ setTimeout(()=>c.classList.add('reveal'), i*90); });
+}
+
+/* ================= CHART.JS GLOBAL DEFAULTS ================= */
+Chart.defaults.font.family = "-apple-system,Segoe UI,Roboto,sans-serif";
+Chart.defaults.color = '#6B7686';
+Chart.defaults.animation.duration = 900;
+Chart.defaults.animation.easing = 'easeOutQuart';
+Chart.defaults.maintainAspectRatio = false;
+Chart.defaults.responsive = true;
+
+const NAVY='#01377D', BLUE='#009DD1', CYAN='#97E7F5', LGREEN='#7ED348', GREEN='#26B170', NEG='#EF6461', NEUTRAL='#F5B942';
+
+if(typeof Chart === 'undefined'){
+  document.body.insertAdjacentHTML('afterbegin', '<div style="background:#FEE2E2;color:#B91C1C;padding:12px 20px;text-align:center;font-size:13px;font-weight:600;">Gagal memuat library grafik (Chart.js) dari CDN. Pastikan koneksi internet aktif, lalu refresh halaman.</div>');
+} else if(typeof ChartDataLabels !== 'undefined'){
+  Chart.register(ChartDataLabels);
+  Chart.defaults.set('plugins.datalabels', { display:false });
+}
+
+function mkChart(id, config){
+  try{
+    const el = document.getElementById(id);
+    if(!el || typeof Chart === 'undefined') return null;
+    return new Chart(el, config);
+  }catch(err){
+    console.error('Chart error ('+id+'):', err);
+    const el = document.getElementById(id);
+    const wrap = el ? el.closest('.chart-wrap') : null;
+    if(wrap) wrap.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#EF6461;font-size:12px;text-align:center;padding:10px;">Grafik gagal dimuat</div>';
+  }
+}
+
+/* ---- 1. Donut Gender x Frekuensi (nested, label di dalam) ---- */
+mkChart('chartGender', {
+  type:'doughnut',
+  data:{
+    labels:['Beberapa Kali Seminggu','Jarang','Setiap Hari','Baru Pertama Kali'],
+    datasets:[
+      { label:'Frekuensi', data:[49.1,27.6,22.4,0.9], backgroundColor:[BLUE,CYAN,NAVY,LGREEN], borderWidth:2, borderColor:'#fff', radius:'100%',
+        datalabels:{ display:'auto', color:['#fff','#0b2540','#fff','#0b2540'], font:{size:11,weight:700}, formatter:v=>v+'%' } },
+      { label:'Gender',
+        // Nilai absolut = persentase Gender di dalam tiap kategori Frekuensi dikali bobot kategori tsb (49.1/27.6/22.4/0.9),
+        // supaya lebar (sudut) irisan dalam SEJAJAR / align dengan irisan luar yang bersangkutan.
+        data:[39.63,9.48, 19.84,7.76, 18.95,3.45, 0.9],
+        backgroundColor:[GREEN,NEUTRAL, GREEN,NEUTRAL, GREEN,NEUTRAL, NEUTRAL],
+        borderWidth:2, borderColor:'#fff', weight:0.6,
+        datalabels:{ display:'auto', color:'#fff', font:{size:9.5,weight:700},
+          // label yang ditampilkan tetap persentase ASLI per kategori (80.7%, 19.3%, dst), bukan nilai absolut di atas
+          formatter:(v,ctx)=> [80.7,19.3,71.9,28.1,84.6,15.4,100][ctx.dataIndex]+'%' } }
+    ]
+  },
+  options:{
+    cutout:'40%',
+    plugins:{ legend:{ position:'bottom', labels:{ boxWidth:10, font:{size:10.5} } },
+      tooltip:{ callbacks:{ label:(ctx)=>{
+        if(ctx.datasetIndex===0){ return ctx.label + ': ' + ctx.parsed + '%'; }
+        const genderPct=[80.7,19.3,71.9,28.1,84.6,15.4,100][ctx.dataIndex];
+        const genderName=['Perempuan','Laki-laki','Perempuan','Laki-laki','Perempuan','Laki-laki','Laki-laki'][ctx.dataIndex];
+        const freqName=['Beberapa Kali Seminggu','Beberapa Kali Seminggu','Jarang','Jarang','Setiap Hari','Setiap Hari','Baru Pertama Kali'][ctx.dataIndex];
+        return freqName+' - '+genderName+': '+genderPct+'%';
+      } } } }
+  }
+});
+
+/* ---- 2. Radar Sering vs Jarang ---- */
+mkChart('chartFreqRadar', {
+  type:'radar',
+  data:{
+    labels:['Kecepatan','Kepraktisan','Atur Pengeluaran','Promo','Biaya Admin','Keamanan'],
+    datasets:[
+      { label:'Pengguna Sering', data:[4.35,4.47,3.94,3.88,4.01,4.20], borderColor:BLUE, backgroundColor:'rgba(0,157,209,0.18)', pointBackgroundColor:BLUE, borderWidth:2 },
+      { label:'Pengguna Jarang', data:[3.42,3.88,3.52,3.76,3.42,3.88], borderColor:NEUTRAL, backgroundColor:'rgba(245,185,66,0.12)', pointBackgroundColor:NEUTRAL, borderWidth:2, borderDash:[5,3] }
+    ]
+  },
+  options:{ scales:{ r:{ min:0, max:5, ticks:{ stepSize:1, backdropColor:'transparent' }, grid:{color:'#E7ECF3'} } },
+    plugins:{ legend:{ position:'bottom', labels:{boxWidth:10, font:{size:10.5}} } } }
+});
+
+/* ---- 3. Bar Prioritas Fitur ---- */
+mkChart('chartFeatureBar', {
+  type:'bar',
+  data:{ labels:['Kepraktisan','Kecepatan','Keamanan','Atur Pengeluaran','Biaya Admin','Promo'],
+    datasets:[{ data:[4.30,4.09,4.11,3.82,3.84,3.84], backgroundColor:[NAVY,BLUE,BLUE,CYAN,CYAN,CYAN], borderRadius:8, maxBarThickness:38,
+      datalabels:{ display:true, anchor:'end', align:'top', offset:4, color:'#101828', font:{size:11,weight:700}, formatter:v=>v.toFixed(2) } }] },
+  options:{ plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>'Skor: '+c.parsed.y}}},
+    scales:{ y:{ min:0,max:5, grid:{color:'#EEF2F7'} }, x:{grid:{display:false}} } }
+});
+
+/* ---- 4. Radar Multidimensi ---- */
+mkChart('chartMultiRadar', {
+  type:'radar',
+  data:{ labels:['Kemudahan (UI/UX)','Fitur','Keamanan','Kecepatan','Biaya (Harga)'],
+    datasets:[{ label:'Skor', data:[4.40,4.30,4.11,4.09,3.84], borderColor:NAVY, backgroundColor:'rgba(1,55,125,0.14)', pointBackgroundColor:NAVY, borderWidth:2.5 }] },
+  options:{ scales:{ r:{ min:0,max:5, ticks:{stepSize:1, backdropColor:'transparent'}, grid:{color:'#E7ECF3'} } },
+    plugins:{ legend:{display:false} } }
+});
+
+/* ---- 5. Gap Kepuasan vs Pilihan Utama (mengikuti referensi gambar) ---- */
+const gapKepuasan = [5.00,4.35,4.06,4.46];
+const gapPilihan  = [4.00,3.39,2.66,4.15];
+const gapValues   = [1.00,0.96,1.40,0.31];
+mkChart('chartGap', {
+  data:{ labels:['Baru Pertama Kali','Beberapa Kali Seminggu','Jarang','Setiap Hari'],
+    datasets:[
+      { type:'bar', label:'Tingkat Kepuasan', data:gapKepuasan, backgroundColor:'rgba(0,157,209,0.55)', borderRadius:4, maxBarThickness:36, order:2 },
+      { type:'bar', label:'Pilihan Utama', data:gapPilihan, backgroundColor:'rgba(245,185,66,0.6)', borderRadius:4, maxBarThickness:36, order:2 },
+      { type:'line', label:'Tingkat Kepuasan', data:gapKepuasan, borderColor:BLUE, backgroundColor:BLUE, borderWidth:2, pointRadius:4, pointBackgroundColor:BLUE, fill:false, tension:.3, order:1, skipLegend:true,
+        datalabels:{ display:true, anchor:'end', align:'top', offset:10, backgroundColor:'#EEF2F7', color:'#374151', borderRadius:6, padding:{top:3,bottom:3,left:7,right:7}, font:{size:10,weight:700},
+          formatter:(v,ctx)=> 'Gap: '+gapValues[ctx.dataIndex].toFixed(1) } },
+      { type:'line', label:'Pilihan Utama', data:gapPilihan, borderColor:NEUTRAL, backgroundColor:NEUTRAL, borderWidth:2, borderDash:[6,4], pointRadius:4, pointBackgroundColor:NEUTRAL, fill:false, tension:.3, order:1, skipLegend:true }
+    ] },
+  options:{ scales:{ y:{ min:1,max:5.5, grid:{color:'#EEF2F7'} }, x:{grid:{display:false}} },
+    plugins:{ legend:{ position:'top', align:'start', labels:{ boxWidth:10, font:{size:10.5},
+      filter:(item,data)=> !data.datasets[item.datasetIndex].skipLegend } } } }
+});
+
+/* ---- 6. Line Pengaruh terhadap Kepuasan ---- */
+mkChart('chartInfluence', {
+  type:'line',
+  data:{ labels:['Kepraktisan','Kecepatan','Keamanan','Atur Pengeluaran','Biaya Admin','Promo'],
+    datasets:[{ data:[0.62,0.52,0.52,0.39,0.35,0.25], borderColor:'#E69F5D', backgroundColor:'rgba(230,159,93,0.12)', fill:true, tension:.35, pointBackgroundColor:'#fff', pointBorderColor:'#E69F5D', pointBorderWidth:2, pointRadius:5,
+      datalabels:{ display:true, anchor:'end', align:'top', offset:6, color:'#B5651D', font:{size:11,weight:700}, formatter:v=>v.toFixed(2) } }] },
+  options:{ plugins:{legend:{display:false}}, scales:{ y:{ min:0,max:1, grid:{color:'#EEF2F7'} }, x:{grid:{display:false}} } }
+});
+
+/* ---- 7. Bar per Variabel (X1 X2 M Y) ---- */
+mkChart('chartVarBar', {
+  type:'bar',
+  data:{ labels:['X1 (Kualitas Sistem)','X2 (Nilai & Keamanan)','M (Kepuasan/Mediator)','Y (Loyalitas)'],
+    datasets:[{ data:[4.28,3.91,4.16,3.78], backgroundColor:[NAVY,BLUE,GREEN,LGREEN], borderRadius:10, maxBarThickness:60,
+      datalabels:{ display:true, anchor:'end', align:'top', offset:4, color:'#101828', font:{size:12,weight:700}, formatter:v=>v.toFixed(2) } }] },
+  options:{ plugins:{legend:{display:false}}, scales:{ y:{min:0,max:5, grid:{color:'#EEF2F7'}}, x:{grid:{display:false}} } }
+});
+
+/* ---- 8. Horizontal Bar 20 Pertanyaan ---- */
+const qLabels = ["Mudah Dipahami (UI/UX)","Efisiensi Waktu","Kepuasan Keseluruhan","Kemudahan Fitur","Kepraktisan","Kuota Internet","Kesesuaian Biaya & Manfaat","Keamanan","Kecepatan","Niat Penggunaan Lanjutan","Untung vs Rugi","Nilai Dibanding Kompetitor","Bersedia Merekomendasikan","Manfaat vs Biaya","Promo & Cashback","Biaya Admin","Atur Pengeluaran","Tetap Pakai Meski Ada Kompetitor","Pilihan Utama (Loyalitas)","Metode Pembayaran Utama"];
+const qValues = [4.40,4.32,4.30,4.30,4.30,4.19,4.12,4.11,4.09,4.03,4.03,3.93,3.90,3.84,3.84,3.84,3.82,3.65,3.41,3.36];
+const qColors = qValues.map((v,i)=> i===qValues.length-1 ? NEG : (i===0? GREEN : NAVY));
+mkChart('chartQBar', {
+  type:'bar',
+  data:{ labels:qLabels, datasets:[{ data:qValues, backgroundColor:qColors, borderRadius:6, maxBarThickness:20,
+    datalabels:{ display:true, anchor:'end', align:'end', offset:4, color:'#101828', font:{size:10.5,weight:700}, formatter:v=>v.toFixed(2) } }] },
+  options:{ indexAxis:'y', plugins:{legend:{display:false}},
+    layout:{ padding:{ right:28 } },
+    scales:{ x:{min:0,max:5, grid:{color:'#EEF2F7'}}, y:{grid:{display:false}, ticks:{font:{size:11}, autoSkip:false}} } }
+});
+
+/* ---- 9. Stacked Sentimen Kuesioner ---- */
+mkChart('chartSentQ', {
+  type:'bar',
+  data:{ labels:['Kategori 0','Kategori 1','Kategori 2','Kategori 3','Kategori 4'],
+    datasets:[
+      { label:'Kepuasan', data:[4,4,5,5,4], backgroundColor:NEUTRAL, datalabels:{display:true} },
+      { label:'Kemudahan', data:[4,3,1,2,5], backgroundColor:'#FFE9A8', datalabels:{display:true} },
+      { label:'Keamanan', data:[4,2,1,3,1], backgroundColor:CYAN, datalabels:{display:true} }
+    ] },
+  options:{ indexAxis:'y', scales:{ x:{ stacked:true, grid:{color:'#EEF2F7'} }, y:{ stacked:true, grid:{display:false} } },
+    plugins:{ legend:{ position:'bottom', labels:{boxWidth:10, font:{size:10.5}} },
+      datalabels:{ display:true, anchor:'center', align:'center', color:'#3c2a00', font:{size:10,weight:700} } } }
+});
+
+/* ---- 10. Distribusi Usia Responden (donut, label di dalam) ---- */
+mkChart('chartUsia', {
+  type:'doughnut',
+  data:{ labels:['18 - 22 Tahun','< 18 Tahun','23 - 27 Tahun'],
+    datasets:[{ data:[108,7,1], backgroundColor:[BLUE,LGREEN,NAVY], borderWidth:2, borderColor:'#fff',
+      datalabels:{ display:'auto', color:['#fff','#0b2540','#fff'], font:{size:11,weight:700}, textAlign:'center',
+        formatter:(v,ctx)=>{ const total=108+7+1; const pct=(v/total*100).toFixed(1); return [ctx.chart.data.labels[ctx.dataIndex], pct+'%']; } } }] },
+  options:{ cutout:'52%', plugins:{ legend:{ position:'bottom', labels:{boxWidth:10, font:{size:10.5}} },
+    tooltip:{ callbacks:{ label:(ctx)=> ctx.label + ': ' + ctx.parsed + ' responden' } } } }
+});
+
+/* ---- 11. Distribusi Rating Ulasan APK ---- */
+mkChart('chartRatingDist', {
+  type:'bar',
+  data:{ labels:['★ 1','★ 2','★ 3','★ 4','★ 5'],
+    datasets:[{ data:[39,4,11,8,162], backgroundColor:[NEG,'#F0958F',NEUTRAL,CYAN,GREEN], borderRadius:8, maxBarThickness:46,
+      datalabels:{ display:true, anchor:'end', align:'top', offset:4, color:'#101828', font:{size:12,weight:700}, formatter:v=>v } }] },
+  options:{ plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.y+' ulasan'}}},
+    scales:{ y:{ beginAtZero:true, max:180, grid:{color:'#EEF2F7'} }, x:{grid:{display:false}} } }
+});
+
+/* ================= CHART SEARCH FILTER (dashboard) ================= */
+const chartSearchInput = document.getElementById('chartSearch');
+let chartEmptyMsg = null;
+function runChartSearch(){
+  const q = chartSearchInput.value.trim().toLowerCase();
+  const cards = document.querySelectorAll('#page-dashboard .chart-card');
+  let visibleCount = 0;
+  cards.forEach(c=>{
+    const haystack = (c.dataset.title + ' ' + c.querySelector('h3').textContent).toLowerCase();
+    const words = q.split(/\s+/).filter(Boolean);
+    const match = q==='' || words.every(w => haystack.includes(w));
+    if(match){
+      c.style.display = '';
+      c.style.opacity = '1';
+      c.style.transform = 'translateY(0)';
+      visibleCount++;
+    } else {
+      c.style.opacity = '0';
+      c.style.transform = 'translateY(-6px)';
+      setTimeout(()=>{ if(c.style.opacity==='0') c.style.display='none'; }, 200);
+    }
+  });
+  // empty state message
+  const grids = document.querySelectorAll('#page-dashboard .grid3, #page-dashboard .grid2');
+  if(!chartEmptyMsg){
+    chartEmptyMsg = document.createElement('div');
+    chartEmptyMsg.className = 'empty-state';
+    chartEmptyMsg.textContent = 'Grafik tidak ditemukan. Coba kata kunci lain, misalnya "radar", "gender", "rating", atau "usia".';
+    chartEmptyMsg.style.display = 'none';
+    document.querySelector('#page-dashboard').appendChild(chartEmptyMsg);
+  }
+  chartEmptyMsg.style.display = (visibleCount===0 && q!=='') ? 'block' : 'none';
+  grids.forEach(g=> g.style.display = (visibleCount===0 && q!=='') ? 'none' : '');
+}
+chartSearchInput.addEventListener('input', runChartSearch);
+chartSearchInput.addEventListener('keydown', e=>{
+  if(e.key==='Escape'){ chartSearchInput.value=''; runChartSearch(); }
+});
+
+/* ================= ULASAN APK: DATA + RENDER ================= */
+const reviews = JSON.parse(document.getElementById('reviews-data').textContent);
+let currentFilter = 'Semua';
+let currentQuery = '';
+let visibleCount = 12;
+
+function starString(r){ const n=Math.round(r); return '★'.repeat(n)+'☆'.repeat(5-n); }
+
+function getFiltered(){
+  return reviews.filter(r=>{
+    const passFilter = currentFilter==='Semua' || r.sentimen===currentFilter;
+    const passQuery = !currentQuery || r.ulasan.toLowerCase().includes(currentQuery) || r.nama_pengguna.toLowerCase().includes(currentQuery);
+    return passFilter && passQuery;
+  });
+}
+
+function renderReviews(){
+  const grid = document.getElementById('reviewGrid');
+  const filtered = getFiltered();
+  const shown = filtered.slice(0, visibleCount);
+  document.getElementById('resultCount').textContent = filtered.length + ' ulasan ditemukan';
+  grid.innerHTML = '';
+  if(shown.length===0){
+    grid.innerHTML = '<div class="empty-state">Tidak ada ulasan yang cocok dengan pencarian/filter ini.</div>';
+  }
+  shown.forEach((r,i)=>{
+    const card = document.createElement('div');
+    card.className='review-card';
+    card.style.animationDelay = (Math.min(i,20)*35)+'ms';
+    card.innerHTML = `
+      <div class="review-top">
+        <div class="review-user">${escapeHtml(r.nama_pengguna)}</div>
+        <div class="sent-badge ${r.sentimen}">${r.sentimen}</div>
+      </div>
+      <div class="stars">${starString(r.rating)}</div>
+      <div class="review-text">${escapeHtml(r.ulasan)}</div>
+      <div class="review-date">${r.tanggal}</div>
+    `;
+    grid.appendChild(card);
+  });
+  document.getElementById('loadMoreWrap').style.display = (visibleCount < filtered.length) ? 'flex' : 'none';
+}
+function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+document.querySelectorAll('#filterRow .filter-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#filterRow .filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    visibleCount = 12;
+    renderReviews();
+  });
+});
+const reviewSearchInput = document.getElementById('reviewSearch');
+reviewSearchInput.addEventListener('input', e=>{
+  currentQuery = e.target.value.toLowerCase().trim();
+  visibleCount = 12;
+  renderReviews();
+});
+reviewSearchInput.addEventListener('keydown', e=>{
+  if(e.key==='Escape'){ reviewSearchInput.value=''; currentQuery=''; visibleCount=12; renderReviews(); }
+});
+document.getElementById('loadMoreBtn').addEventListener('click', ()=>{
+  visibleCount += 12;
+  renderReviews();
+});
+
+/* ================= INIT ================= */
+renderReviews();
+animateCounters(document.getElementById('page-dashboard'));
+revealCharts(document.getElementById('page-dashboard'));
+</script>
+</body>
+</html>
